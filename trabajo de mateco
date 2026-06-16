@@ -1,0 +1,201 @@
+-  problema 1
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Definición de variables y la función de posición
+A = 1
+t = np.linspace(0, 6, 500)
+x = A * np.exp(-1/3 * t) * np.cos(2 * np.pi * t + np.pi / 4)
+
+# Gráfica de la posición
+plt.figure(figsize=(8, 4))
+plt.plot(t, x, color='red', label='Posición x(t)')
+plt.title('Gráfica de la Función de Posición')
+plt.xlabel('Tiempo (s)')
+plt.ylabel('Posición (m)')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+
+- problema 2
+
+import numpy as np
+import matplotlib.pyplot as plt
+import sympy as sp
+
+# 1. Derivación analítica con SymPy
+t_sym = sp.Symbol('t')
+A = 1
+
+x_sym = A * sp.exp(-1/3 * t_sym) * sp.cos(2 * sp.pi * t_sym + sp.pi / 4)
+v_sym = sp.diff(x_sym, t_sym)   # Primera derivada (Velocidad)
+a_sym = sp.diff(v_sym, t_sym)   # Segunda derivada (Aceleración)
+
+# 2. Conversión a funciones numéricas
+x_func = sp.lambdify(t_sym, x_sym, 'numpy')
+v_func = sp.lambdify(t_sym, v_sym, 'numpy')
+a_func = sp.lambdify(t_sym, a_sym, 'numpy')
+
+# Evaluación en el intervalo de 0 a 6 s
+t_val = np.linspace(0, 6, 500)
+x_val = x_func(t_val)
+v_val = v_func(t_val)
+a_val = a_func(t_val)
+
+# 3. Creación de subplots compartiendo el eje x
+fig, axs = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
+
+# Primera gráfica: Posición (Color rojo)
+axs[0].plot(t_val, x_val, color='red', label='Posición x(t)')
+axs[0].set_title('Análisis Cinemático')
+axs[0].set_ylabel('Posición (m)')
+axs[0].grid(True)
+axs[0].legend()
+
+# Segunda gráfica: Velocidad (Color azul)
+axs[1].plot(t_val, v_val, color='blue', label='Velocidad v(t)')
+axs[1].set_ylabel('Velocidad (m/s)')
+axs[1].grid(True)
+axs[1].legend()
+
+# Tercera gráfica: Aceleración
+axs[2].plot(t_val, a_val, color='green', label='Aceleración a(t)')
+axs[2].set_xlabel('Tiempo (s)')
+axs[2].set_ylabel('Aceleración (m/s²)')
+axs[2].grid(True)
+axs[2].legend()
+
+plt.tight_layout()
+plt.show()
+
+-  problema 3
+
+import numpy as np
+import matplotlib.pyplot as plt
+import sympy as sp
+from scipy.integrate import simpson
+from matplotlib.widgets import Slider
+
+# 1. Obtención de las funciones de velocidad y aceleración (del problema anterior)
+t_sym = sp.Symbol('t')
+A = 1
+x_sym = A * sp.exp(-1/3 * t_sym) * sp.cos(2 * sp.pi * t_sym + sp.pi / 4)
+v_sym = sp.diff(x_sym, t_sym)
+a_sym = sp.diff(v_sym, t_sym)
+
+v_func = sp.lambdify(t_sym, v_sym, 'numpy')
+a_func = sp.lambdify(t_sym, a_sym, 'numpy')
+
+# Base de datos completa (0 a 6 segundos)
+t_completo = np.linspace(0, 6, 600)
+v_completo = v_func(t_completo)
+a_completo = a_func(t_completo)
+
+# 2. Configuración de la figura y subplots
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 7))
+plt.subplots_adjust(bottom=0.25)  # Espacio para el deslizador
+
+# Graficar curvas completas de fondo
+ax1.plot(t_completo, v_completo, color='blue', alpha=0.3, label='v(t) completa')
+ax2.plot(t_completo, a_completo, color='green', alpha=0.3, label='a(t) completa')
+
+# Inicializar las áreas sombreadas y textos
+area_v_sombreade = ax1.fill_between([], [], color='blue', alpha=0.4)
+area_a_sombreade = ax2.fill_between([], [], color='green', alpha=0.4)
+
+texto_v = ax1.text(0.05, 0.05, '', transform=ax1.transAxes, bbox=dict(facecolor='white', alpha=0.8))
+texto_a = ax2.text(0.05, 0.05, '', transform=ax2.transAxes, bbox=dict(facecolor='white', alpha=0.8))
+
+# Configuración estética de los ejes
+ax1.set_title('Integración Numérica Interactiva')
+ax1.set_ylabel('Velocidad (m/s)')
+ax1.grid(True)
+ax2.set_xlabel('Tiempo (s)')
+ax2.set_ylabel('Aceleración (m/s²)')
+ax2.grid(True)
+
+# 3. Función de actualización para el deslizador
+def actualizar(t_max):
+    global area_v_sombreade, area_a_sombreade
+    
+    # Limitar el vector de tiempo hasta el valor del slider
+    t_actual = np.linspace(0, t_max, int(t_max * 100) + 2)
+    v_actual = v_func(t_actual)
+    a_actual = a_func(t_actual)
+    
+    # Remover sombreados anteriores para redibujar
+    area_v_sombreade.remove()
+    area_a_sombreade.remove()
+    area_v_sombreade = ax1.fill_between(t_actual, v_actual, color='blue', alpha=0.4)
+    area_a_sombreade = ax2.fill_between(t_actual, a_actual, color='green', alpha=0.4)
+    
+    # Calcular integrales si hay suficientes puntos
+    if len(t_actual) > 1:
+        # Integral de v(t)
+        int_v_trapz = np.trapz(v_actual, t_actual)
+        int_v_simps = simpson(v_actual, x=t_actual)
+        
+        # Integral de a(t)
+        int_a_trapz = np.trapz(a_actual, t_actual)
+        int_a_simps = simpson(a_actual, x=t_actual)
+    else:
+        int_v_trapz = int_v_simps = int_a_trapz = int_a_simps = 0.0
+
+    # Actualizar textos en los gráficos
+    texto_v.set_text(f'Trapz: {int_v_trapz:.4f}\nSimpson: {int_v_simps:.4f}')
+    texto_a.set_text(f'Trapz: {int_a_trapz:.4f}\nSimpson: {int_a_simps:.4f}')
+    
+    fig.canvas.draw_idle()
+
+# 4. Creación del deslizador (Slider)
+ax_slider = plt.axes([0.15, 0.1, 0.7, 0.03])
+slider_t = Slider(ax_slider, 'Tiempo límite (t)', 0.0, 6.0, valinit=3.0, valstep=0.1)
+
+# Conectar el slider con la función de actualización
+slider_t.on_changed(actualizar)
+
+# Ejecución inicial
+actualizar(3.0)
+
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
